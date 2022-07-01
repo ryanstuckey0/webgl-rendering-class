@@ -1,0 +1,556 @@
+<!--CSE 5542 - Lab 4 - By Ryan Stuckey-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ryan Stuckey - CSE 5542 - Lab 5</title>
+
+    <!-- Unlit Fragment Shader -->
+    <script id="unlit-fs" type="x-shader/x-fragment">
+      precision mediump float;
+      varying vec4 vColor;
+
+      void main(void) {
+          gl_FragColor = vColor;
+      }
+    </script>
+
+    <!-- Unlit Vertex Shader -->
+    <script id="unlit-vs" type="x-shader/x-vertex">
+      precision mediump float;
+      attribute vec3 aVertexPosition;
+      attribute vec3 aVertexColor;
+      varying vec4 vColor;
+
+      uniform mat4 uMVMatrix;
+      uniform mat4 uPMatrix;
+
+      void main(void) {
+          gl_PointSize = 10.0;
+          gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+          vColor = vec4(aVertexColor, 1.0);
+      }
+    </script>
+
+    <!-- Gouraud Fragment Shader -->
+    <script id="gouraud-fs" type="x-shader/x-fragment">
+      precision mediump float;
+
+      // vertex varyings
+      varying vec4 vFragColor;
+
+      void main(void) {
+          gl_FragColor = vFragColor;
+      }
+    </script>
+
+    <!-- Gouraud Vertex Shader -->
+    <script id="gouraud-vs" type="x-shader/x-vertex">
+      precision mediump float;
+
+      // vertex attributes
+      attribute vec3 aVertexPosition; // already in model space
+      attribute vec3 aVertexNormal; // also in model space
+
+      // vertex varyings
+      varying vec4 vFragColor;
+
+      // light uniforms
+      uniform vec3 uLightPosition;
+      uniform vec3 uLightAmbient;
+      uniform vec3 uLightDiffuse;
+      uniform vec3 uLightSpecular;
+
+      // material uniforms
+      uniform vec3 uMaterialAmbient;
+      uniform vec3 uMaterialDiffuse;
+      uniform vec3 uMaterialSpecular;
+      uniform float uMaterialShininess;
+
+      // matrices
+      uniform mat4 uModelViewMatrix;
+      uniform mat4 uProjectionMatrix;
+
+      void main(void) {
+          vec3 vertexPosition = vec3(uModelViewMatrix * vec4(aVertexPosition, 1.0));
+
+          // ambient
+          vec3 ambient = uLightAmbient * uMaterialAmbient;
+
+          // diffuse
+          vec3 L = normalize(uLightPosition - vertexPosition);
+          vec3 N = normalize(aVertexNormal);
+          float NdotL = max(dot(N, L), 0.0);
+          vec3 diffuse = uLightDiffuse * uMaterialDiffuse * NdotL;
+
+          // specular
+          vec3 V = -normalize(vertexPosition);
+          vec3 R = normalize(reflect(-L, N));
+          float RdotV = max(dot(R, V), 0.0);
+          float RdotVpow = pow(RdotV, uMaterialShininess);
+          vec3 specular;
+          if(NdotL > 0.0)
+              specular = uLightSpecular * uMaterialSpecular * RdotVpow;
+          else
+              specular = vec3(0.0, 0.0, 0.0);
+
+          vFragColor = vec4(ambient + diffuse + specular, 1.0);
+          gl_Position = uProjectionMatrix * vec4(vertexPosition, 1.0);
+      }
+    </script>
+
+    <!-- Phong Fragment Shader -->
+    <script id="phong-fs" type="x-shader/x-fragment">
+      precision mediump float;
+
+      // vertex varyings
+      varying vec3 vFragPosition;
+      varying vec3 vFragNormal;
+      varying vec2 vTexCoord;
+
+      // light uniforms
+      uniform vec3 uLightPosition;
+      uniform vec3 uLightAmbient;
+      uniform vec3 uLightDiffuse;
+      uniform vec3 uLightSpecular;
+
+      // material uniforms
+      uniform vec3 uMaterialAmbient;
+      uniform vec3 uMaterialDiffuse;
+      uniform vec3 uMaterialSpecular;
+      uniform float uMaterialShininess;
+      uniform sampler2D uTexture;
+
+      uniform bool uUseTexture;
+
+      void main(void) {
+          // texture
+          vec4 texColor = texture2D(uTexture, vTexCoord);
+
+          // ambient
+          vec3 ambient = uLightAmbient * uMaterialAmbient;
+
+          // diffuse
+          vec3 L = normalize(uLightPosition - vFragPosition);
+          vec3 N = normalize(vFragNormal);
+          float NdotL = max(dot(N, L), 0.0);
+          vec3 diffuse = uLightDiffuse * uMaterialDiffuse * NdotL;
+
+          // specular
+          vec3 V = -normalize(vFragPosition);
+          vec3 R = normalize(reflect(-L, N));
+          float RdotV = max(dot(R, V), 0.0);
+          float RdotVpow = pow(RdotV, 1.0 / uMaterialShininess);
+          vec3 specular;
+          if(NdotL > 0.0)
+              specular = uLightSpecular * uMaterialSpecular * RdotVpow;
+          else
+              specular = vec3(0.0, 0.0, 0.0);
+
+          if(uUseTexture) gl_FragColor = vec4(ambient + diffuse, 1.0) * texColor + vec4(specular, 1.0);
+          else gl_FragColor = vec4(ambient + diffuse + specular, 1.0);
+      }
+    </script>
+
+    <!-- Phong Vertex Shader -->
+    <script id="phong-vs" type="x-shader/x-vertex">
+      precision mediump float;
+
+      // vertex attributes
+      attribute vec3 aVertexPosition; // already in model space
+      attribute vec3 aVertexNormal; // also in model space
+      attribute vec2 aVertexTexCoord;
+
+      // vertex varyings
+      varying vec3 vFragPosition;
+      varying vec3 vFragNormal;
+      varying vec2 vTexCoord;
+
+      // matrices
+      uniform mat4 uModelViewMatrix;
+      uniform mat4 uProjectionMatrix;
+
+      void main(void) {
+          vFragNormal = vec3(uModelViewMatrix * vec4(aVertexNormal, 0.0));
+          vFragPosition = vec3(uModelViewMatrix * vec4(aVertexPosition, 1.0));
+          vTexCoord = aVertexTexCoord;
+
+          gl_Position = uProjectionMatrix * vec4(vFragPosition, 1.0);
+      }
+    </script>
+
+    <!-- Toon Fragment Shader -->
+    <script id="toon-fs" type="x-shader/x-fragment">
+      precision mediump float;
+
+      // vertex varyings
+      varying vec3 vFragPosition;
+      varying vec3 vFragNormal;
+      varying vec2 vTexCoord;
+
+      // light uniforms
+      uniform vec3 uLightPosition;
+      uniform vec3 uLightAmbient;
+      uniform vec3 uLightDiffuse;
+      uniform vec3 uLightSpecular;
+
+      // material uniforms
+      uniform vec3 uMaterialAmbient;
+      uniform vec3 uMaterialDiffuse;
+      uniform vec3 uMaterialSpecular;
+      uniform float uMaterialShininess;
+      uniform sampler2D uTexture;
+
+      uniform bool uUseTexture;
+
+      void main(void) {
+          // texture
+          vec4 texColor = texture2D(uTexture, vTexCoord);
+
+          // ambient
+          vec3 ambient = uLightAmbient * uMaterialAmbient;
+
+          // diffuse
+          vec3 L = normalize(uLightPosition - vFragPosition);
+          vec3 N = normalize(vFragNormal);
+          float NdotL = max(dot(N, L), 0.0);
+          vec3 diffuse = uLightDiffuse * uMaterialDiffuse * NdotL;
+
+          // specular
+          vec3 V = -normalize(vFragPosition);
+          vec3 R = normalize(reflect(-L, N));
+          float RdotV = max(dot(R, V), 0.0);
+          float RdotVpow = pow(RdotV, 1.0 / uMaterialShininess);
+          vec3 specular;
+          if(NdotL > 0.0)
+              specular = uLightSpecular * uMaterialSpecular * RdotVpow;
+          else
+              specular = vec3(0.0, 0.0, 0.0);
+
+          vec4 color;
+          if(uUseTexture) color = vec4(ambient + diffuse, 1.0) * texColor + vec4(specular, 1.0);
+          else color = vec4(ambient + diffuse + specular, 1.0);
+
+            if(NdotL > 0.8)
+                  color = color * 1.2;
+            else if(NdotL > 0.4)
+                  color = color * 1.0;
+            else
+                  color = color * 0.8;
+
+            gl_FragColor = vec4(color.xyz, 1.0);
+      }
+    </script>
+
+    <!-- Toon Vertex Shader -->
+    <script id="toon-vs" type="x-shader/x-vertex">
+      precision mediump float;
+
+      // vertex attributes
+      attribute vec3 aVertexPosition; // already in model space
+      attribute vec3 aVertexNormal; // also in model space
+      attribute vec2 aVertexTexCoord;
+
+      // vertex varyings
+      varying vec3 vFragPosition;
+      varying vec3 vFragNormal;
+      varying vec2 vTexCoord;
+
+      // matrices
+      uniform mat4 uModelViewMatrix;
+      uniform mat4 uProjectionMatrix;
+
+      void main(void) {
+          vFragNormal = vec3(uModelViewMatrix * vec4(aVertexNormal, 0.0));
+          vFragPosition = vec3(uModelViewMatrix * vec4(aVertexPosition, 1.0));
+          vTexCoord = aVertexTexCoord;
+
+          gl_Position = uProjectionMatrix * vec4(vFragPosition, 1.0);
+      }
+    </script>
+
+    <!-- Normals Fragment Shader -->
+    <script id="normals-fs" type="x-shader/x-fragment">
+      precision mediump float;
+
+      // vertex varyings
+      varying vec4 vFragColor;
+
+      void main(void) {
+          gl_FragColor = vFragColor;
+      }
+    </script>
+
+    <!-- Normals Vertex Shader -->
+    <script id="normals-vs" type="x-shader/x-vertex">
+      precision mediump float;
+
+      // vertex attributes
+      attribute vec3 aVertexPosition; // already in model space
+      attribute vec3 aVertexNormal; // also in model space
+
+      // vertex varyings
+      varying vec4 vFragColor;
+
+      // matrices
+      uniform mat4 uModelViewMatrix;
+      uniform mat4 uProjectionMatrix;
+
+      void main(void) {
+          vFragColor = vec4(normalize(vec3(uModelViewMatrix * vec4(aVertexNormal, 0.0))), 1.0);
+          gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aVertexPosition, 1.0);
+      }
+    </script>
+
+    <!-- Interpolated Normals Fragment Shader -->
+    <script id="normals-interpolated-fs" type="x-shader/x-fragment">
+      precision mediump float;
+
+      // vertex varyings
+      varying vec3 vFragNormal;
+
+      void main(void) {
+          gl_FragColor = vec4(normalize(vFragNormal), 1.0);
+      }
+    </script>
+
+    <!-- Interpolated Normals Vertex Shader -->
+    <script id="normals-interpolated-vs" type="x-shader/x-vertex">
+      precision mediump float;
+
+      // vertex attributes
+      attribute vec3 aVertexPosition; // already in model space
+      attribute vec3 aVertexNormal; // also in model space
+
+      // vertex varyings
+      varying vec3 vFragNormal;
+
+      // matrices
+      uniform mat4 uModelViewMatrix;
+      uniform mat4 uProjectionMatrix;
+
+      void main(void) {
+          vFragNormal = vec3(uModelViewMatrix * vec4(aVertexNormal, 0.0));
+
+          gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aVertexPosition, 1.0);
+      }
+    </script>
+
+    <!-- OBJ Fragment Shader -->
+    <script id="obj-fs" type="x-shader/x-fragment">
+      precision mediump float;
+      precision mediump int;
+
+      // vertex varyings
+      varying vec3 vFragPosition;
+      varying vec3 vFragNormal;
+      varying vec2 vTexCoord;
+
+      // texture lighting maps
+      uniform int uEnableMapKa;
+      uniform int uEnableMapKd;
+      uniform int uEnableMapKs;
+      uniform sampler2D uTextureKa;
+      uniform sampler2D uTextureKd;
+      uniform sampler2D uTextureKs;
+
+      // material uniforms
+      uniform vec3 uMaterialAmbient;
+      uniform vec3 uMaterialDiffuse;
+      uniform vec3 uMaterialSpecular;
+      uniform float uMaterialShininess;
+      uniform sampler2D uTexture;
+
+      // light uniforms
+      uniform vec3 uLightPosition;
+      uniform vec3 uLightAmbient;
+      uniform vec3 uLightDiffuse;
+      uniform vec3 uLightSpecular;
+
+      uniform bool uUseTexture;
+
+      void main(void) {
+              // texture
+              vec4 texColor = texture2D(uTexture, vTexCoord);
+
+              // ambient
+              vec3 ambient;
+
+              if(uEnableMapKa == 1)
+                  ambient = uLightAmbient * uMaterialAmbient * texture2D(uTextureKa, vTexCoord).rgb;
+              else
+                  ambient = uLightAmbient * uMaterialAmbient;
+
+
+              // diffuse
+              vec3 diffuse;
+              vec3 L = normalize(uLightPosition - vFragPosition);
+              vec3 N = normalize(vFragNormal);
+              float NdotL = max(dot(N,L), 0.0);
+              if(uEnableMapKd == 1)
+                  diffuse = uLightDiffuse * uMaterialDiffuse * texture2D(uTextureKd, vTexCoord).rgb * NdotL;
+              else
+                  diffuse = uLightDiffuse * uMaterialDiffuse * NdotL;
+
+
+              // specular
+              vec3 specular;
+              vec3 V = -normalize(vFragPosition);
+              vec3 R = normalize(reflect(-L, N));
+              float RdotV = max(dot(R,V), 0.0);
+              float RdotVpow = pow(RdotV, 1.0 / uMaterialShininess);
+              if(uEnableMapKs == 1)
+                  specular = uLightSpecular * uMaterialSpecular * texture2D(uTextureKs, vTexCoord).rgb * RdotVpow;
+              else
+                specular = uLightSpecular * uMaterialSpecular * RdotVpow;
+
+              gl_FragColor = vec4(ambient + diffuse + specular, 1.0);
+      }
+    </script>
+
+    <!-- OBJ Vertex Shader -->
+    <script id="obj-vs" type="x-shader/x-vertex">
+      precision mediump float;
+      precision mediump int;
+
+      // vertex attributes
+      attribute vec3 aVertexPosition;
+      attribute vec3 aVertexNormal;
+      attribute vec2 aVertexTexCoord;
+
+      // vertex varyings
+      varying vec3 vFragPosition;
+      varying vec3 vFragNormal;
+      varying vec2 vTexCoord;
+
+      // matrices
+      uniform mat4 uModelViewMatrix;
+      uniform mat4 uProjectionMatrix;
+
+      void main(void) {
+          vFragNormal = vec3(uModelViewMatrix * vec4(aVertexNormal, 0.0));
+          vFragPosition = vec3(uModelViewMatrix * vec4(aVertexPosition, 1.0));
+          vTexCoord = aVertexTexCoord;
+
+          gl_PointSize = 1.0;
+          gl_Position = uProjectionMatrix * vec4(vFragPosition, 1.0);
+      }
+    </script>
+
+    <script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
+    <script type="text/javascript" src="shaderSetup.js"></script>
+    <script type="text/javascript" src="worldHierarchyManager.js"></script>
+    <script type="text/javascript" src="shapeGenerator.js"></script>
+    <script type="text/javascript" src="creature.js"></script>
+    <script type="text/javascript" src="utilities.js"></script>
+    <script type="text/javascript" src="Material.js"></script>
+    <script type="text/javascript" src="Texture.js"></script>
+    <script type="text/javascript" src="worldGen.js"></script>
+    <script
+      type="text/javascript"
+      src="OBJLoaderWithTexture/objLoaderWithTexture.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="OBJLoaderWithTexture/obj_sample.js"
+    ></script>
+    <script type="text/javascript" src="lab5.js"></script>
+  </head>
+
+  <body onload="webGLStart();">
+    <div>
+      <div style="display: inline-block">
+        <canvas
+          id="lab5-canvas"
+          style="border: none"
+          width="500"
+          height="500"
+        ></canvas>
+      </div>
+      <div style="display: inline-block">
+        <table border="3px">
+          <tr>
+            <td>
+              <p id="status"><b>Status: </b>Not ready. Initializing.</p>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <p id="camera"></p>
+              <button onclick="switchToFixedCamera()">Fixed</button>
+              <button onclick="switchToFpsCamera()">FPS</button>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <p id="current-shader"></p>
+              <button onclick="switchShader(0)">Phong</button>
+              <button onclick="switchShader(1)">Toon</button>
+              <button onclick="switchShader(2)">Normals</button>
+              <button onclick="switchShader(3)">Normals (interpolated)</button>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div>
+                <p id="control-mode"></p>
+                <button onclick="switchControlMode(0)">Light Components</button>
+                <button onclick="switchControlMode(1)">Light Movement</button>
+                <button onclick="switchControlMode(2)">Camera</button>
+                <button onclick="switchControlMode(3)">Creature</button>
+                <button onclick="switchControlMode(4)">Car</button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <p><b>Light Components</b></p>
+              <div>
+                <table border="1px">
+                  <tr>
+                    <td>ambient</td>
+                    <td>diffuse</td>
+                    <td>specular</td>
+                  </tr>
+                  <tr>
+                    <td align="center">
+                      <button id="ambient-status" onclick="toggleAmbient()">
+                        On
+                      </button>
+                    </td>
+                    <td align="center">
+                      <button id="diffuse-status" onclick="toggleDiffuse()">
+                        On
+                      </button>
+                    </td>
+                    <td align="center">
+                      <button id="specular-status" onclick="toggleSpecular()">
+                        On
+                      </button>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div>
+                <h4>Background:</h4>
+                <button onclick="setBackground([1,0,0])">Red</button>
+                <button onclick="setBackground([0,1,0])">Green</button>
+                <button onclick="setBackground([0,0,1])">Blue</button>
+                <button onclick="setBackground([0.5,0.5,0.5])">Grey</button>
+                <button onclick="setBackground([0,0,0])">Black</button>
+                <button onclick="setBackground([1,1,1])">White</button>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <center>CSE 5542 - Lab 5 - Ryan Stuckey - 12/10/2021</center>
+  </body>
+</html>

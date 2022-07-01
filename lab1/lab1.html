@@ -1,0 +1,75 @@
+<!--CSE 5542 - Lab 1 - By Ryan Stuckey-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ryan Stuckey - CSE 5542 - Lab 1</title>
+
+    <!-- Fragment Shader -->
+    <script id="shader-fs" type="x-shader/x-fragment">
+      precision mediump float;
+      varying vec4 vColor;
+
+      void main(void) { gl_FragColor = vColor; }
+    </script>
+
+    <!-- Vertex Shader -->
+    <script id="shader-vs" type="x-shader/x-vertex">
+      precision mediump float;
+      attribute vec3 aVertexPosition;
+      attribute vec3 aVertexColor;
+      varying vec4 vColor;
+
+      void main(void) {
+        gl_PointSize = 10.0;
+        gl_Position = vec4(aVertexPosition, 1.0);
+        vColor = vec4(aVertexColor, 1.0);
+      }
+    </script>
+    <script type="text/javascript" src="shader-setup.js"></script>
+    <script type="text/javascript" src="lab1.js"></script>
+  </head>
+
+  <body onload="webGLStart();">
+    <canvas
+      id="lab1-canvas"
+      style="border: none"
+      width="900"
+      height="900"
+    ></canvas>
+
+    <table border="5">
+      <tr style="font-weight: bolder">
+        <td>Action</td>
+        <td>Control</td>
+      </tr>
+      <tr>
+        <td>Draw Point</td>
+        <td>P</td>
+      </tr>
+      <tr>
+        <td>Draw Horizontal Line</td>
+        <td>H</td>
+      </tr>
+      <tr>
+        <td>Draw Vertical Line</td>
+        <td>V</td>
+      </tr>
+      <tr>
+        <td>Draw Triangle</td>
+        <td>T</td>
+      </tr>
+      <tr>
+        <td>Draw Square</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td>Clear Canvas</td>
+        <td>C</td>
+      </tr>
+    </table>
+    <center>CSE 5542 - Lab 1 - Ryan Stuckey - 9/15/2021</center>
+  </body>
+</html>
