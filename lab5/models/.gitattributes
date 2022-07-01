@@ -1,0 +1,2 @@
+girl.obj filter=lfs diff=lfs merge=lfs -text
+mclaren.obj filter=lfs diff=lfs merge=lfs -text

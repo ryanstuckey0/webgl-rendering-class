@@ -1,0 +1,49 @@
+<!--CSE 5542 - Lab 2 - By Ryan Stuckey-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ryan Stuckey - CSE 5542 - Lab 2</title>
+
+    <!-- Fragment Shader -->
+    <script id="shader-fs" type="x-shader/x-fragment">
+      precision mediump float;
+      varying vec4 vColor;
+
+      void main(void) { gl_FragColor = vColor; }
+    </script>
+
+    <!-- Vertex Shader -->
+    <script id="shader-vs" type="x-shader/x-vertex">
+      precision mediump float;
+      attribute vec3 aVertexPosition;
+      attribute vec3 aVertexColor;
+      varying vec4 vColor;
+
+      uniform mat4 uMVMatrix;
+
+      void main(void) {
+        gl_PointSize = 10.0;
+        gl_Position = uMVMatrix * vec4(aVertexPosition, 1.0);
+        vColor = vec4(aVertexColor, 1.0);
+      }
+    </script>
+    <script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
+    <script type="text/javascript" src="shape-design.js"></script>
+    <script type="text/javascript" src="shader-setup.js"></script>
+    <script type="text/javascript" src="lab2.js"></script>
+  </head>
+
+  <body onload="webGLStart();">
+    <canvas
+      id="lab2-canvas"
+      style="border: none"
+      width="500"
+      height="500"
+    ></canvas>
+    <hr>
+    <center>CSE 5542 - Lab 2 - Ryan Stuckey - 10/3/2021</center>
+  </body>
+</html>

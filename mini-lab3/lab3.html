@@ -1,0 +1,214 @@
+<!--CSE 5542 - Lab 2 - By Ryan Stuckey-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ryan Stuckey - CSE 5542 - Mini Lab 3</title>
+
+    <!-- Fragment Shader -->
+    <script id="shader-fs" type="x-shader/x-fragment">
+      precision mediump float;
+      uniform vec4 uColor;
+
+      void main(void) { gl_FragColor = uColor; }
+    </script>
+
+    <!-- Vertex Shader -->
+    <script id="shader-vs" type="x-shader/x-vertex">
+      precision mediump float;
+      attribute vec3 aVertexPosition;
+      attribute vec3 aVertexColor;
+
+      uniform mat4 uMVMatrix;
+
+      void main(void) {
+        gl_PointSize = 10.0;
+        gl_Position = uMVMatrix * vec4(aVertexPosition, 1.0);
+      }
+    </script>
+    <script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
+    <script type="text/javascript" src="shader-setup.js"></script>
+    <script type="text/javascript" src="2d-creature.js"></script>
+    <script type="text/javascript" src="lab3.js"></script>
+  </head>
+
+  <body onload="webGLStart();">
+    <h1>Mini Lab 3</h1>
+    <canvas
+      id="lab3-canvas"
+      style="border: none"
+      width="500"
+      height="500"
+    ></canvas>
+    <p>
+      All the transformations for my creature lie in the file "2d-creature.js" to
+      reduce the amount of code in my main javascript file.
+    </p>
+    <p>
+      My creature has six different arms/legs, so I made a system to select
+      which arm to control to cut down on the number of keys needed to
+      manipulate my drawing. The arms are number 1-6, starting at the top left
+      and going counter-clockwise (e.g., arm #1 is the top left, arm #2 is the
+      middle left, etc). After selecting a arm using the number keys, it can be
+      controlled using the keys below. Not every arm is the same, so some
+      controls cannot be used on specific arms.
+    </p>
+    <table border="5">
+      <thead>
+        <tr>
+          <th align="left">Basic Controls</th>
+          <th align="center"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td align="left">Move shape up</td>
+          <td align="center">w</td>
+        </tr>
+        <tr>
+          <td align="left">Move shape right</td>
+          <td align="center">d</td>
+        </tr>
+        <tr>
+          <td align="left">Move shape down</td>
+          <td align="center">s</td>
+        </tr>
+        <tr>
+          <td align="left">Move shape left</td>
+          <td align="center">a</td>
+        </tr>
+        <tr>
+          <td align="left">Make shape smaller</td>
+          <td align="center">f</td>
+        </tr>
+        <tr>
+          <td align="left">Make shape bigger</td>
+          <td align="center">F + Shift</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate CW</td>
+          <td align="center">r</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate CCW</td>
+          <td align="center">R + shift</td>
+        </tr>
+        <tr>
+          <td align="left">Toggle Axis Visibility</td>
+          <td align="center">e</td>
+        </tr>
+        <tr>
+          <td align="left">Switch Draw Mode</td>
+          <td align="center">q</td>
+        </tr>
+      </tbody>
+    </table>
+    <hr />
+    <table border="5">
+      <thead>
+        <tr>
+          <th align="left">Head Movement Controls</th>
+          <th align="center"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td align="left">Rotate Neck CW</td>
+          <td align="center">v</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate Neck CCW</td>
+          <td align="center">V + Shift</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate Head CW</td>
+          <td align="center">b</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate Head CCW</td>
+          <td align="center">B + Shift</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate Left Eye CW</td>
+          <td align="center">z</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate Left Eye CCW</td>
+          <td align="center">Z + Shift</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate Middle Eye CW</td>
+          <td align="center">x</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate Middle Eye CCW</td>
+          <td align="center">X + Shift</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate Right Eye CW</td>
+          <td align="center">c</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate Right Eye CCW</td>
+          <td align="center">C + Shift</td>
+        </tr>
+      </tbody>
+    </table>
+    <hr />
+    <table border="5">
+      <thead>
+        <tr>
+          <th align="left">Tentacle Movement Controls</th>
+          <th align="center"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td align="left">:-------------------------</td>
+          <td align="center">:------------:</td>
+        </tr>
+        <tr>
+          <td align="left">Select Arm to Move</td>
+          <td align="center">Number Row 1-6</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate main tentacle CW</td>
+          <td align="center">t</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate main tentacle CCW</td>
+          <td align="center">T + Shift</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate sub-tentacle CW</td>
+          <td align="center">y</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate sub-tentacle CWW</td>
+          <td align="center">Y + Shift</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate Finger/Foot 1 CW</td>
+          <td align="center">g</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate Finger/Foot 1 CCW</td>
+          <td align="center">G + Shift</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate Finger 2 CW</td>
+          <td align="center">h</td>
+        </tr>
+        <tr>
+          <td align="left">Rotate Finger 2 CCW</td>
+          <td align="center">H + Shift</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>*CW = clockwise, CCW = counter-clockwise</p>
+    <hr />
+    <center>CSE 5542 - Mini Lab 3 - Ryan Stuckey - 10/14/2021</center>
+  </body>
+</html>
